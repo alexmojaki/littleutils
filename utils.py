@@ -293,7 +293,7 @@ class _MagicPrinter(object):
     """
     >>> a = 'hello world how are you today'
     >>> b = [{1: 2}, a, [3] * 20]
-    >>> magic_print('a b')
+    >>> magic_print('a b', x=1+2)
     <BLANKLINE>
     =================== a : ===================
     <BLANKLINE>
@@ -305,6 +305,11 @@ class _MagicPrinter(object):
     [{1: 2},
      'hello world how are you today',
      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]]
+    <BLANKLINE>
+    <BLANKLINE>
+    =================== x : ===================
+    <BLANKLINE>
+    3
     <BLANKLINE>
     >>> magic_print.a.b  # doctest:+ELLIPSIS
     <BLANKLINE>
@@ -323,22 +328,28 @@ class _MagicPrinter(object):
     """
 
     @staticmethod
-    def _print_item(name):
+    def _print_variable(name):
         value = helpful_error_dict_get(inspect.currentframe().f_back.f_back.f_locals, name)
+        _MagicPrinter._print_named_value(name, value)
+
+    @staticmethod
+    def _print_named_value(name, value):
         print('\n=================== %s : ===================\n' % name)
         pprint(value)
         print('')
 
     def __getattr__(self, item):
         try:
-            self._print_item(item)
+            self._print_variable(item)
         except KeyError as e:
             raise AttributeError(e.message)
         return self
 
-    def __call__(self, names):
+    def __call__(self, names, **kwargs):
         for name in ensure_list_if_string(names):
-            self._print_item(name)
+            self._print_variable(name)
+        for name, value in kwargs.items():
+            self._print_named_value(name, value)
 
 
 magic_print = _MagicPrinter()
