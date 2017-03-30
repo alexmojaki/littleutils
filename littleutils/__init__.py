@@ -6,13 +6,18 @@ import logging.config
 import re
 
 try:
+    # noinspection PyCompatibility
     from UserDict import IterableUserDict as UserDict
+    # noinspection PyCompatibility
     from UserList import UserList
 except ImportError:
+    # noinspection PyUnresolvedReferences
     from collections import UserDict, UserList
 try:
+    # noinspection PyCompatibility
     basestring
 except NameError:
+    # noinspection PyShadowingBuiltins
     basestring = str
 from collections import Sized, defaultdict, Mapping, Sequence
 from datetime import datetime, date, time
@@ -113,6 +118,7 @@ def only(it):
     if isinstance(it, Sized):
         if len(it) != 1:
             raise AssertionError('Expected one value, found %s' % len(it))
+        # noinspection PyUnresolvedReferences
         return it[0]
 
     lst = tuple(islice(it, 2))
@@ -232,11 +238,15 @@ def strip_required_prefix(string, prefix):
 
 def ensure_list_if_string(x):
     """
+    Allows an argument to be passed either as a list of strings or a single string delimited
+    by spaces and/or commas.
     >>> assert (ensure_list_if_string(['abc', 'def', '123']) ==
     ...         ensure_list_if_string('abc,def,123') ==
     ...         ensure_list_if_string('abc def 123') ==
     ...         ensure_list_if_string(', abc , def , 123  , ,') ==
     ...         ['abc', 'def', '123'])
+    >>> ensure_list_if_string('')
+    []
     """
     if isinstance(x, basestring):
         x = list(filter(None, re.split('[,\s]+', x)))
@@ -345,7 +355,7 @@ class _MagicPrinter(object):
             raise AttributeError(e.message)
         return self
 
-    def __call__(self, names, **kwargs):
+    def __call__(self, names='', **kwargs):
         for name in ensure_list_if_string(names):
             self._print_variable(name)
         for name, value in kwargs.items():
@@ -559,7 +569,7 @@ class DecentJSONEncoder(JSONEncoder):
                                  (o.__class__.__name__, self.max_iterable_elements))
             return result
         # Let the base class default method raise the TypeError
-        return JSONEncoder.default(self, o)
+        return super(DecentJSONEncoder, self).default(o)
 
 
 if __name__ == "__main__":
