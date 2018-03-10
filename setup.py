@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='littleutils',
-      version='0.1',
+      version='0.2.0',
       description='Small personal collection of python utility functions',
       url='https://github.com/alexmojaki/littleutils',
       author='Alex Hall',

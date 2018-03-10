@@ -4,6 +4,7 @@ import inspect
 import json
 import logging.config
 import re
+from operator import attrgetter
 
 try:
     # noinspection PyCompatibility
@@ -19,7 +20,7 @@ try:
 except NameError:
     # noinspection PyShadowingBuiltins
     basestring = str
-from collections import Sized, defaultdict, Mapping, Sequence
+from collections import Sized, defaultdict, Mapping, Sequence, MutableMapping
 from datetime import datetime, date, time
 from decimal import Decimal
 from fractions import Fraction
@@ -141,6 +142,8 @@ class DoctestLogger(object):
     def error(self, message, *args):
         self.logs.append(message % args)
 
+    warn = error
+
     def print_logs(self):
         print('\n'.join(self.logs))
 
@@ -197,7 +200,7 @@ def retry(num_attempts=3, exception_class=Exception, log=None, sleeptime=1):
                         raise
                     else:
                         if log:
-                            log.error('Failed with error %r, trying again', e)
+                            log.warn('Failed with error %r, trying again', e)
                         sleep(sleeptime)
 
         return wrapper
@@ -234,6 +237,37 @@ def strip_required_prefix(string, prefix):
     if string.startswith(prefix):
         return string[len(prefix):]
     raise AssertionError('String starts with %r, not %r' % (string[:len(prefix)], prefix))
+
+
+def strip_optional_suffix(string, suffix, log=None):
+    """
+    >>> strip_optional_suffix('abcdef', 'def')
+    'abc'
+    >>> strip_optional_suffix('abcdef', '123')
+    'abcdef'
+    >>> strip_optional_suffix('abcdef', '123', PrintingLogger())
+    String ends with 'def', not '123'
+    'abcdef'
+    """
+    if string.endswith(suffix):
+        return string[:-len(suffix)]
+    if log:
+        log.warn('String ends with %r, not %r', string[-len(suffix):], suffix)
+    return string
+
+
+def strip_required_suffix(string, suffix):
+    """
+    >>> strip_required_suffix('abcdef', 'def')
+    'abc'
+    >>> strip_required_suffix('abcdef', '123')
+    Traceback (most recent call last):
+    ...
+    AssertionError: String ends with 'def', not '123'
+    """
+    if string.endswith(suffix):
+        return string[:-len(suffix)]
+    raise AssertionError('String ends with %r, not %r' % (string[-len(suffix):], suffix))
 
 
 def ensure_list_if_string(x):
@@ -299,6 +333,11 @@ def select_keys(d, keys, helpful_error=True):
         return {k: d[k] for k in keys}
 
 
+def select_attrs(x, attrs):
+    attrs = ensure_list_if_string(attrs)
+    return {k: getattr(x, k) for k in attrs}
+
+
 class _MagicPrinter(object):
     """
     >>> a = 'hello world how are you today'
@@ -334,7 +373,7 @@ class _MagicPrinter(object):
      'hello world how are you today',
      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]]
     <BLANKLINE>
-    <__main__._MagicPrinter object at ...>
+    ...
     """
 
     @staticmethod
@@ -370,10 +409,11 @@ def group_by_key_func(iterable, key_func):
     Create a dictionary from an iterable such that the keys are the result of evaluating a key function on elements
     of the iterable and the values are lists of elements all of which correspond to the key.
 
-    >>> dict(group_by_key_func("a bb ccc d ee fff".split(), len))  # the dict() is just for looks
-    {1: ['a', 'd'], 2: ['bb', 'ee'], 3: ['ccc', 'fff']}
-    >>> dict(group_by_key_func([-1, 0, 1, 3, 6, 8, 9, 2], lambda x: x % 2))
-    {0: [0, 6, 8, 2], 1: [-1, 1, 3, 9]}
+    >>> def si(d): return sorted(d.items())
+    >>> si(group_by_key_func("a bb ccc d ee fff".split(), len))
+    [(1, ['a', 'd']), (2, ['bb', 'ee']), (3, ['ccc', 'fff'])]
+    >>> si(group_by_key_func([-1, 0, 1, 3, 6, 8, 9, 2], lambda x: x % 2))
+    [(0, [0, 6, 8, 2]), (1, [-1, 1, 3, 9])]
     """
     result = defaultdict(list)
     for item in iterable:
@@ -381,20 +421,26 @@ def group_by_key_func(iterable, key_func):
     return result
 
 
+def group_by_key(iterable, key):
+    return group_by_key_func(iterable, lambda x: helpful_error_dict_get(x, key))
+
+
+def group_by_attr(iterable, attr):
+    return group_by_key_func(iterable, attrgetter(attr))
+
+
 def setattrs(obj, **kwargs):
     """
-    >>> class Data(object): pass
-    >>> data = Data()
+    >>> data = SimpleNamespace()
     >>> setattrs(data, a=1, b=2)  # doctest:+ELLIPSIS
-    <__main__.Data object at ...>
-    >>> data.a
-    1
-    >>> data.b
-    2
+    SimpleNamespace(a=1, b=2)
     """
     for key, value in kwargs.items():
         setattr(obj, key, value)
     return obj
+
+
+withattrs = setattrs
 
 
 def string_to_file(string, path):
@@ -572,7 +618,94 @@ class DecentJSONEncoder(JSONEncoder):
         return super(DecentJSONEncoder, self).default(o)
 
 
+def try_parse_json(s):
+    try:
+        return json.loads(s)
+    except ValueError:
+        raise ValueError('Failed to parse JSON: %s' % s[:1000])
+
+
+class AttrsDict(MutableMapping):
+    """
+    Lets you treat an object like a dictionary. More than just
+    __dict__ because it uses getattr, setattr, delattr, hasattr, and dir,
+    which also take methods, properties, __getattr__ etc. into account.
+    Some dict methods such as clear and popitem will fail.
+
+    >>> x = SimpleNamespace(a=1, b=2)
+    >>> x
+    SimpleNamespace(a=1, b=2)
+    >>> a = AttrsDict(x)
+    >>> a['b']
+    2
+    >>> a.update(c=3, d=4)
+    >>> x
+    SimpleNamespace(a=1, b=2, c=3, d=4)
+    """
+
+    def __init__(self, x):
+        self.x = x
+
+    def __setitem__(self, key, value):
+        setattr(self.x, key, value)
+
+    def __delitem__(self, key):
+        x = self.x
+        try:
+            delattr(x, key)
+        except AttributeError as e:
+            raise KeyError(e.message)
+
+    def __getitem__(self, key):
+        x = self.x
+        try:
+            return getattr(x, key)
+        except AttributeError as e:
+            raise KeyError(e.message)
+
+    def __len__(self):
+        return len(dir(self))
+
+    def __iter__(self):
+        return iter(dir(self))
+
+    def __contains__(self, item):
+        return hasattr(self.x, item)
+
+    def get(self, key, default=None):
+        return getattr(self.x, key, default)
+
+    def keys(self):
+        return dir(self)
+
+
+class SimpleNamespace(object):
+    """
+    Copied from https://docs.python.org/3/library/types.html#types.SimpleNamespace
+
+    >>> x = SimpleNamespace(a=1, b=2)
+    >>> x
+    SimpleNamespace(a=1, b=2)
+    >>> x.a
+    1
+    >>> x.b
+    2
+    """
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __repr__(self):
+        keys = sorted(self.__dict__)
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+
 if __name__ == "__main__":
     import doctest
+    import sys
 
-    doctest.testmod()
+    sys.exit(doctest.testmod()[0])
