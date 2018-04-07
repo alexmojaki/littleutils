@@ -21,14 +21,15 @@ except NameError:
     # noinspection PyShadowingBuiltins
     basestring = str
 from collections import Sized, defaultdict, Mapping, Sequence, MutableMapping
-from datetime import datetime, date, time
+from contextlib import contextmanager
+from datetime import datetime, date, time as time_type
 from decimal import Decimal
 from fractions import Fraction
 from numbers import Rational
 from itertools import islice
 from json.encoder import JSONEncoder
 from pprint import pprint
-from time import sleep
+from time import sleep, time
 
 try:
     from types import SimpleNamespace
@@ -179,6 +180,8 @@ class PrintingLogger(object):
     @staticmethod
     def warn(message, *args):
         print(message % args)
+
+    info = error = warn
 
 
 def retry(num_attempts=3, exception_class=Exception, log=None, sleeptime=1):
@@ -602,7 +605,7 @@ class DecentJSONEncoder(JSONEncoder):
     """
     >>> json.dumps([UserList(), (x for x in range(3)), HelpfulErrorDict(),
     ... Decimal('0.123'), Fraction(1, 3),
-    ... date(2001, 2, 3), datetime(2004, 5, 6, 7, 8, 9), time(10, 11, 12)],
+    ... date(2001, 2, 3), datetime(2004, 5, 6, 7, 8, 9), time_type(10, 11, 12)],
     ... cls=DecentJSONEncoder)
     '[[], [0, 1, 2], {}, 0.123, 0.3333333333333333, "2001-02-03T00:00:00", "2004-05-06T07:08:09", "10:11:12"]'
     >>> from itertools import repeat
@@ -629,7 +632,7 @@ class DecentJSONEncoder(JSONEncoder):
             return float(o)
         if isinstance(o, date):
             return date_to_datetime(o).isoformat()
-        if isinstance(o, time):
+        if isinstance(o, time_type):
             return o.isoformat()
         try:
             iterable = iter(o)
@@ -704,6 +707,33 @@ class AttrsDict(MutableMapping):
 
     def keys(self):
         return dir(self)
+
+
+@contextmanager
+def timer(description='Operation', log=None):
+    """
+    Simple context manager which logs (if log is provided)
+    or prints the time taken in seconds for the block to complete.
+
+    >>> with timer():
+    ...    sleep(0.1)               # doctest:+ELLIPSIS
+    Operation took 0.1... seconds
+
+    >>> with timer('Sleeping'):
+    ...    sleep(0.2)               # doctest:+ELLIPSIS
+    Sleeping took 0.2... seconds
+
+    >>> with timer(description='Doing', log=PrintingLogger()):
+    ...    sleep(0.3)               # doctest:+ELLIPSIS
+    Doing took 0.3... seconds
+
+    """
+
+    start = time()
+    yield
+    elapsed = time() - start
+    message = '%s took %s seconds' % (description, elapsed)
+    (print if log is None else log.info)(message)
 
 
 if __name__ == "__main__":
