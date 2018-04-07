@@ -30,6 +30,33 @@ from json.encoder import JSONEncoder
 from pprint import pprint
 from time import sleep
 
+try:
+    from types import SimpleNamespace
+except ImportError:
+    class SimpleNamespace(object):
+        """
+        Copied from https://docs.python.org/3/library/types.html#types.SimpleNamespace
+
+        >>> x = SimpleNamespace(a=1, b=2)
+        >>> x
+        SimpleNamespace(a=1, b=2)
+        >>> x.a
+        1
+        >>> x.b
+        2
+        """
+
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+        def __repr__(self):
+            keys = sorted(self.__dict__)
+            items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
+            return "{}({})".format(type(self).__name__, ", ".join(items))
+
+        def __eq__(self, other):
+            return self.__dict__ == other.__dict__
+
 
 def _helpful_dict_error(d, key):
     raise KeyError('Tried to access %r, only keys are: %s' % (key, str(sorted(d.keys()))[:1000]))
@@ -677,31 +704,6 @@ class AttrsDict(MutableMapping):
 
     def keys(self):
         return dir(self)
-
-
-class SimpleNamespace(object):
-    """
-    Copied from https://docs.python.org/3/library/types.html#types.SimpleNamespace
-
-    >>> x = SimpleNamespace(a=1, b=2)
-    >>> x
-    SimpleNamespace(a=1, b=2)
-    >>> x.a
-    1
-    >>> x.b
-    2
-    """
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-    def __repr__(self):
-        keys = sorted(self.__dict__)
-        items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
-        return "{}({})".format(type(self).__name__, ", ".join(items))
-
-    def __eq__(self, other):
-        return self.__dict__ == other.__dict__
 
 
 if __name__ == "__main__":
