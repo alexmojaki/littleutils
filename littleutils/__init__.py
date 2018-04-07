@@ -39,7 +39,7 @@ except ImportError:
 
         >>> x = SimpleNamespace(a=1, b=2)
         >>> x
-        SimpleNamespace(a=1, b=2)
+        namespace(a=1, b=2)
         >>> x.a
         1
         >>> x.b
@@ -52,7 +52,7 @@ except ImportError:
         def __repr__(self):
             keys = sorted(self.__dict__)
             items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
-            return "{}({})".format(type(self).__name__, ", ".join(items))
+            return "namespace({})".format(", ".join(items))
 
         def __eq__(self, other):
             return self.__dict__ == other.__dict__
@@ -460,7 +460,7 @@ def setattrs(obj, **kwargs):
     """
     >>> data = SimpleNamespace()
     >>> setattrs(data, a=1, b=2)  # doctest:+ELLIPSIS
-    SimpleNamespace(a=1, b=2)
+    namespace(a=1, b=2)
     """
     for key, value in kwargs.items():
         setattr(obj, key, value)
@@ -661,13 +661,13 @@ class AttrsDict(MutableMapping):
 
     >>> x = SimpleNamespace(a=1, b=2)
     >>> x
-    SimpleNamespace(a=1, b=2)
+    namespace(a=1, b=2)
     >>> a = AttrsDict(x)
     >>> a['b']
     2
     >>> a.update(c=3, d=4)
     >>> x
-    SimpleNamespace(a=1, b=2, c=3, d=4)
+    namespace(a=1, b=2, c=3, d=4)
     """
 
     def __init__(self, x):
