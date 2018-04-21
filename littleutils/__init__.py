@@ -694,19 +694,22 @@ class AttrsDict(MutableMapping):
             raise KeyError(e.message)
 
     def __len__(self):
-        return len(dir(self))
+        return len(self.keys())
 
     def __iter__(self):
-        return iter(dir(self))
+        return iter(self.keys())
 
     def __contains__(self, item):
         return hasattr(self.x, item)
+
+    def __repr__(self):
+        return repr(dict(self))
 
     def get(self, key, default=None):
         return getattr(self.x, key, default)
 
     def keys(self):
-        return dir(self)
+        return dir(self.x)
 
 
 @contextmanager
