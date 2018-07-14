@@ -148,7 +148,7 @@ def only(it):
         if len(it) != 1:
             raise AssertionError('Expected one value, found %s' % len(it))
         # noinspection PyUnresolvedReferences
-        return it[0]
+        return list(it)[0]
 
     lst = tuple(islice(it, 2))
     if len(lst) == 0:
