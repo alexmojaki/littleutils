@@ -148,7 +148,7 @@ def only(it):
         if len(it) != 1:
             raise AssertionError('Expected one value, found %s' % len(it))
         # noinspection PyUnresolvedReferences
-        return it[0]
+        return list(it)[0]
 
     lst = tuple(islice(it, 2))
     if len(lst) == 0:
@@ -188,35 +188,35 @@ def retry(num_attempts=3, exception_class=Exception, log=None, sleeptime=1):
     """
     >>> def fail():
     ...     runs[0] += 1
-    ...     {}[1]
+    ...     raise ValueError()
     >>> runs = [0]; retry(sleeptime=0)(fail)()
     Traceback (most recent call last):
     ...
-    KeyError: 1
+    ValueError
     >>> runs
     [3]
     >>> runs = [0]; retry(2, sleeptime=0)(fail)()
     Traceback (most recent call last):
     ...
-    KeyError: 1
+    ValueError
     >>> runs
     [2]
     >>> runs = [0]; retry(exception_class=IndexError, sleeptime=0)(fail)()
     Traceback (most recent call last):
     ...
-    KeyError: 1
+    ValueError
     >>> runs
     [1]
     >>> logger = DoctestLogger()
     >>> runs = [0]; retry(log=logger, sleeptime=0)(fail)()
     Traceback (most recent call last):
     ...
-    KeyError: 1
+    ValueError
     >>> runs
     [3]
     >>> logger.print_logs()
-    Failed with error KeyError(1,), trying again
-    Failed with error KeyError(1,), trying again
+    Failed with error ValueError(), trying again
+    Failed with error ValueError(), trying again
     """
 
     def decorator(func):
@@ -694,19 +694,22 @@ class AttrsDict(MutableMapping):
             raise KeyError(e.message)
 
     def __len__(self):
-        return len(dir(self))
+        return len(self.keys())
 
     def __iter__(self):
-        return iter(dir(self))
+        return iter(self.keys())
 
     def __contains__(self, item):
         return hasattr(self.x, item)
+
+    def __repr__(self):
+        return repr(dict(self))
 
     def get(self, key, default=None):
         return getattr(self.x, key, default)
 
     def keys(self):
-        return dir(self)
+        return dir(self.x)
 
 
 @contextmanager
