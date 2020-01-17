@@ -489,8 +489,8 @@ def file_to_string(path):
         return f.read()
 
 
-def json_to_file(obj, path):
-    string_to_file(json.dumps(obj), path)
+def json_to_file(obj, path, **json_kwargs):
+    string_to_file(json.dumps(obj, **json_kwargs), path)
 
 
 def file_to_json(path):
