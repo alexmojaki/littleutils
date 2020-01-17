@@ -21,8 +21,12 @@ except NameError:
     # noinspection PyShadowingBuiltins
     basestring = str
 
-from collections.abc import Sized, Mapping, Sequence, MutableMapping
-from collections import defaultdict
+try:
+    from collections.abc import Sized, Mapping, Sequence, MutableMapping
+    from collections import defaultdict
+except ImportError:
+    from collections import defaultdict, Sized, Mapping, Sequence, MutableMapping
+
 from contextlib import contextmanager
 from datetime import datetime, date, time as time_type
 from decimal import Decimal
