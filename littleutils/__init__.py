@@ -319,7 +319,7 @@ def ensure_list_if_string(x):
     []
     """
     if isinstance(x, basestring):
-        x = list(filter(None, re.split('[,\s]+', x)))
+        x = list(filter(None, re.split(r'[,\s]+', x)))
     return x
 
 
