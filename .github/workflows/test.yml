@@ -28,13 +28,7 @@ jobs:
       run: |
         python --version
         pip install --upgrade pip
-        pip install --upgrade coveralls .[tests]
+        pip install .
     - name: Test
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        COVERALLS_FLAG_NAME: "test-${{ matrix.python-version }}-${{ matrix.os }}"
-        COVERALLS_PARALLEL: true
       run: |
-        coverage run --source littleutils -m pytest tests
-        coverage report -m
-        coveralls --service=github
+        python littleutils/__init__.py
